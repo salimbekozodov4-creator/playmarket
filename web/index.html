@@ -4,31 +4,41 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Mini App Store</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: linear-gradient(135deg, #6b8ce6 0%, #7356b8 100%); min-height: 100vh; padding: 14px; -webkit-font-smoothing:antialiased }
       header { background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); margin-bottom: 30px; text-align: center; }
-      h1 { font-size: 28px; color: #333; margin: 0; }
+      h1 { font-size: 22px; color: #222; margin: 0; }
       .container { max-width: 1000px; margin: 0 auto; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
       .card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15); transition: transform 0.3s ease, box-shadow 0.3s ease; }
-      .card:hover { transform: translateY(-8px); box-shadow: 0 15px 50px rgba(0,0,0,0.2); }
+      .card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,0.18); }
       .card-icon { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 48px; }
-      .card-body { padding: 18px; }
-      .card-title { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 8px; }
-      .card-desc { font-size: 14px; color: #666; margin-bottom: 16px; line-height: 1.4; }
+      .card-body { padding: 12px; }
+      .card-title { font-size: 15px; font-weight: 700; color: #222; margin-bottom: 6px; }
+      .card-desc { font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.3; }
       .card-actions { display: flex; gap: 8px; }
-      .btn { padding: 10px 14px; border: 0; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease; }
-      .btn-download { background: #667eea; color: white; flex: 1; text-decoration: none; text-align: center; display: inline-block; }
-      .btn-download:hover { background: #764ba2; }
+      .btn { padding: 10px 14px; border: 0; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.18s ease; }
+      .btn-download { background: #3b6ce6; color: white; flex: 1; text-decoration: none; text-align: center; display: inline-block; padding: 12px 10px; border-radius: 12px; }
+      .btn-download:active { transform: translateY(1px); }
       .empty { text-align: center; color: white; padding: 60px 20px; }
       .empty h2 { font-size: 32px; margin-bottom: 10px; }
       .empty p { font-size: 16px; opacity: 0.9; }
+
+      /* Mobile tweaks */
+      @media (max-width: 480px){
+        body{padding:12px}
+        .grid{grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:10px}
+        .card{border-radius:12px}
+        .card-title{font-size:14px}
+        .btn-download{padding:12px;font-size:15px}
+      }
     </style>
   </head>
   <body>
     <header>
-      <h1>📱 Mini App Store</h1>
+      <h1><span class="material-icons" style="vertical-align:middle;color:#3b6ce6">storefront</span> Mini App Store</h1>
     </header>
     <script>
       // If your dynamic API (server.py) is hosted separately, set its base URL here.
@@ -45,11 +55,11 @@
     </main>
 
     <script>
-      const fileTypeIcon = (filename) => {
-        if (filename.endsWith('.apk')) return '🤖';
-        if (filename.endsWith('.exe')) return '🪟';
-        return '📦';
-      };
+        const fileTypeIcon = (filename) => {
+          if (filename && filename.endsWith('.apk')) return 'android';
+          if (filename && filename.endsWith('.exe')) return 'desktop_windows';
+          return 'apps';
+        };
 
       async function loadApps(){
         try{
@@ -61,50 +71,66 @@
           if(!apps || apps.length===0){ empty.style.display='block'; return }
           empty.style.display='none';
           apps.forEach(a=>{
-            const card = document.createElement('div'); 
+            const card = document.createElement('div');
             card.className='card';
-            
-            // Show image if available, otherwise show icon
-            const imageDiv = document.createElement('div'); 
-            imageDiv.className='card-icon';
-            
-            if(a.photo_id) {
+
+            // Compact icon area
+            const iconWrap = document.createElement('div');
+            iconWrap.style.padding = '18px';
+            iconWrap.style.display = 'flex';
+            iconWrap.style.justifyContent = 'center';
+
+            if(a.icon_id) {
               const img = document.createElement('img');
-              img.src = (API_BASE || '') + '/photo/' + a.photo_id;
-              img.style.width = '100%';
-              img.style.height = '100%';
+              img.src = (API_BASE || '') + '/photo/' + a.icon_id;
+              img.width = 128; img.height = 128;
               img.style.objectFit = 'cover';
-              imageDiv.appendChild(img);
+              img.style.borderRadius = '20px';
+              iconWrap.appendChild(img);
             } else {
-              imageDiv.textContent = fileTypeIcon(a.file_name || '');
+                const ico = document.createElement('span');
+                ico.className = 'material-icons';
+                ico.textContent = fileTypeIcon(a.file_name || '');
+                ico.style.fontSize = '64px';
+                ico.style.color = '#fff';
+                iconWrap.style.background = 'linear-gradient(135deg, #88a8ff 0%, #7b56c8 100%)';
+                iconWrap.style.borderRadius = '14px';
+                iconWrap.style.padding = '18px';
+                iconWrap.appendChild(ico);
             }
-            
-            const body = document.createElement('div'); 
-            body.className='card-body';
-            
-            const title = document.createElement('h3'); 
-            title.className='card-title'; 
-            title.textContent = a.title || 'Untitled';
-            
-            const desc = document.createElement('p'); 
-            desc.className='card-desc'; 
-            desc.textContent = a.description || '';
-            
-            const actions = document.createElement('div'); 
+
+            const titleLink = document.createElement('a');
+            titleLink.href = 'appinfo.html?file_id=' + encodeURIComponent(a.file_id);
+            titleLink.className = 'card-title';
+            titleLink.textContent = a.title || 'Untitled';
+            titleLink.style.display = 'block';
+            titleLink.style.textAlign = 'center';
+            titleLink.style.margin = '10px 0 6px 0';
+            titleLink.style.color = '#333';
+            titleLink.style.textDecoration = 'none';
+
+            const creator = document.createElement('div');
+            creator.className = 'card-desc';
+            creator.textContent = a.creator ? ('By ' + a.creator) : '';
+            creator.style.textAlign = 'center';
+            creator.style.fontSize = '13px';
+
+            const actions = document.createElement('div');
             actions.className='card-actions';
-            
-            const download = document.createElement('a'); 
-            download.className='btn btn-download'; 
-            download.textContent = '⬇️ Yuklab olish';
+            actions.style.padding = '12px 18px 18px 18px';
+
+            const download = document.createElement('a');
+            download.className='btn btn-download';
+            download.innerHTML = '<span class="material-icons" style="vertical-align:middle">file_download</span> Yuklab olish';
             download.href = (API_BASE || '') + '/download/' + a.file_id;
             download.target = '_blank';
-            
+
             actions.appendChild(download);
-            body.appendChild(title);
-            body.appendChild(desc);
-            body.appendChild(actions);
-            card.appendChild(imageDiv);
-            card.appendChild(body);
+
+            card.appendChild(iconWrap);
+            card.appendChild(titleLink);
+            card.appendChild(creator);
+            card.appendChild(actions);
             mount.appendChild(card);
           })
         }catch(e){ 

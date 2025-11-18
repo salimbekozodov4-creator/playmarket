@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # MUHIM: Environment variables dan olish (default qiymatlar ishlatish kerak emas!)
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8556257044:AAGZEgPCZWBGv5vCa04sYlr8s_xh1ZwvWs0")
 BOT_ADMIN_ID = os.environ.get("BOT_ADMIN_ID", "8258534176")  # BU YERDA XATO BOR EDI!
-WEBAPP_BASE_URL = os.environ.get("WEBAPP_BASE_URL", "https://telegram-app-store.onrender.com").rstrip('/')
+WEBAPP_BASE_URL = os.environ.get("WEBAPP_BASE_URL", "https://e8bb7e91-8729-4c70-afe1-6a47e4e013ee-00-2lmml3qrb08jx.pike.replit.dev/").rstrip('/')
 
 APPS_FILE = "apps.json"
 
@@ -84,7 +84,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_text = (
         "👋 Salom! Mini App Store'ga xush kelibsiz!\n\n"
         "🛒 Do'konni ochish uchun pastdagi tugmani bosing\n"
-        "📱 Ilovalar ro'yxatini ko'rish: /list\n\n"
+        "\n"
     )
     
     if _is_admin(user.id):
@@ -129,36 +129,90 @@ async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     context.user_data['file_id'] = update.message.document.file_id
     context.user_data['file_name'] = file_name
-    
+
     logger.info(f"File received: {file_name} (ID: {update.message.document.file_id})")
-    
-    await update.message.reply_text("✅ Fayl qabul qilindi!\n\n2️⃣ Endi rasm yuboring:")
-    return "WAITING_PHOTO"
+
+    await update.message.reply_text(
+        "✅ Fayl qabul qilindi!\n\n2️⃣ Ilova ikonkasi uchun rasm yuboring (512x512 tavsiya qilinadi):"
+    )
+    return "WAITING_ICON"
 
 
-async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Rasm qabul qilish"""
+async def receive_icon(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Icon (primary image) qabul qilish"""
     if not update.message.photo:
         await update.message.reply_text("Iltimos, rasm yuboring!")
-        return "WAITING_PHOTO"
-    
+        return "WAITING_ICON"
+
+    photo = update.message.photo[-1]
+    photo_id = photo.file_id
+    width = getattr(photo, 'width', None)
+    height = getattr(photo, 'height', None)
+
+    context.user_data['icon_id'] = photo_id
+
+    # Warn if not 512x512 but still accept
+    if width and height and not (width == 512 and height == 512):
+        await update.message.reply_text(
+            f"⚠️ Ikonka o'lchami {width}x{height}. Tavsiya: 512x512.\n"
+            "Agar davom etmoqchi bo'lsangiz, ilovaga screenshotlarni yuboring (bir nechta rasm),\n"
+            "yoki /done deb yuboring agar screenshot yo'q."
+        )
+    else:
+        await update.message.reply_text(
+            "✅ Ikonka qabul qilindi!\n\n3️⃣ Ilova uchun screenshotlar yuboring (bir nechta rasm yuboring).\n"
+            "Tugatgach /done yozing. Agar screenshot yo'q bo'lsa, /done ni yuboring."
+        )
+
+    # initialize screenshots list
+    context.user_data.setdefault('screenshots', [])
+    return "WAITING_SCREENSHOTS"
+
+
+async def collect_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Bir nechta screenshotlarni qabul qilish"""
+    if not update.message.photo:
+        await update.message.reply_text("Iltimos, rasm yuboring yoki /done deb yuboring!")
+        return "WAITING_SCREENSHOTS"
+
     photo_id = update.message.photo[-1].file_id
-    context.user_data['photo_id'] = photo_id
-    
-    logger.info(f"Photo received (ID: {photo_id})")
-    
-    await update.message.reply_text("✅ Rasm qabul qilindi!\n\n3️⃣ Ilova nomini kiriting:")
+    context.user_data.setdefault('screenshots', []).append(photo_id)
+    count = len(context.user_data.get('screenshots', []))
+    await update.message.reply_text(f"✅ Screenshot qabul qilindi ({count}). Yana yuboring yoki /done yozing.")
+    return "WAITING_SCREENSHOTS"
+
+
+async def finish_screenshots(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Screenshots to'plamini tugatish"""
+    screenshots = context.user_data.get('screenshots', [])
+    if not screenshots:
+        # allow skipping screenshots
+        await update.message.reply_text("Siz hech qanday screenshot yubormadingiz. Davom etish uchun yaratuvchi nomini kiriting yoki /skip deb yuboring.")
+    else:
+        await update.message.reply_text(f"✅ {len(screenshots)} screenshot saqlandi.\n\n4️⃣ Ilova yaratuvchisining display nomini kiriting (yoki /skip):")
+
+    return "WAITING_CREATOR"
+
+
+async def receive_creator(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Yaratuvchi (creator) display nomi qabul qilish"""
+    if not update.message or not update.message.text:
+        await update.message.reply_text("Iltimos, yaratuvchi display nomini yozing yoki /skip deb yuboring.")
+        return "WAITING_CREATOR"
+
+    context.user_data['creator'] = update.message.text.strip()
+    await update.message.reply_text("✅ Yaratuvchi saqlandi.\n\n5️⃣ Ilova nomini kiriting:")
     return "WAITING_NAME"
 
 
 async def receive_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Nom qabul qilish"""
+    """Ilova nomi qabul qilish"""
     if not update.message or not update.message.text:
         await update.message.reply_text("Iltimos, ilova nomini yozing!")
         return "WAITING_NAME"
-    
+
     context.user_data['title'] = update.message.text.strip()
-    await update.message.reply_text("4️⃣ Qisqa tavsif kiriting:")
+    await update.message.reply_text("✅ Nom saqlandi.\n\n6️⃣ Qisqa tavsif kiriting:")
     return "WAITING_DESC"
 
 
@@ -173,11 +227,13 @@ async def receive_desc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Ma'lumotlarni apps.json'ga saqlash
     apps = _load_apps()
     new_app = {
-        "title": context.user_data['title'],
+        "title": context.user_data.get('title'),
         "description": description,
-        "file_id": context.user_data['file_id'],
-        "file_name": context.user_data['file_name'],
-        "photo_id": context.user_data['photo_id']
+        "file_id": context.user_data.get('file_id'),
+        "file_name": context.user_data.get('file_name'),
+        "icon_id": context.user_data.get('icon_id'),
+        "screenshots": context.user_data.get('screenshots', []),
+        "creator": context.user_data.get('creator')
     }
     apps.append(new_app)
     _save_apps(apps)
@@ -186,9 +242,11 @@ async def receive_desc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(
         f"✅ Ilova muvaffaqiyatli qo'shildi!\n\n"
-        f"📱 Nom: {context.user_data['title']}\n"
+        f"📱 Nom: {context.user_data.get('title')}\n"
+        f"👤 Yaratuvchi: {context.user_data.get('creator') or '—'}\n"
         f"📝 Tavsif: {description}\n"
-        f"📄 Fayl: {context.user_data['file_name']}"
+        f"📄 Fayl: {context.user_data.get('file_name')}\n"
+        f"📷 Screenshotlar: {len(context.user_data.get('screenshots', []))}"
     )
     
     context.user_data.clear()
@@ -239,15 +297,19 @@ def main():
     # /start buyrug'i
     app.add_handler(CommandHandler("start", start))
     
-    # /list buyrug'i
-    app.add_handler(CommandHandler("list", list_apps))
+    # Note: /list command removed — only /start and /addapp are available
     
     # /addapp conversation
     conv = ConversationHandler(
         entry_points=[CommandHandler("addapp", addapp_cmd)],
         states={
             "WAITING_FILE": [MessageHandler(filters.Document.ALL, receive_file)],
-            "WAITING_PHOTO": [MessageHandler(filters.PHOTO, receive_photo)],
+            "WAITING_ICON": [MessageHandler(filters.PHOTO, receive_icon)],
+            "WAITING_SCREENSHOTS": [
+                MessageHandler(filters.PHOTO, collect_screenshot),
+                CommandHandler('done', finish_screenshots),
+            ],
+            "WAITING_CREATOR": [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_creator), CommandHandler('skip', receive_name)],
             "WAITING_NAME": [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_name)],
             "WAITING_DESC": [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_desc)],
         },

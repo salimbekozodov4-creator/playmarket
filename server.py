@@ -11,6 +11,7 @@ Usage (for local testing):
    `ngrok http 5000` and set `WEBAPP_BASE_URL` to the https ngrok URL.
 """
 from flask import Flask, send_from_directory, abort, jsonify, redirect
+from flask_cors import CORS
 import os
 import json
 import logging
@@ -26,6 +27,7 @@ APPS_FILE = os.path.join(BASE_DIR, "apps.json")
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
 app = Flask(__name__, static_folder=WEB_DIR, static_url_path="")
+CORS(app)
 bot = Bot(token=BOT_TOKEN) if BOT_TOKEN else None
 
 
