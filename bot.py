@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # MUHIM: Environment variables dan olish (default qiymatlar ishlatish kerak emas!)
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8556257044:AAGZEgPCZWBGv5vCa04sYlr8s_xh1ZwvWs0")
 BOT_ADMIN_ID = os.environ.get("BOT_ADMIN_ID", "8258534176")  # BU YERDA XATO BOR EDI!
-WEBAPP_BASE_URL = os.environ.get("WEBAPP_BASE_URL", "https://playmarket-production.up.railway.app").rstrip('/')
+WEBAPP_BASE_URL = os.environ.get("WEBAPP_BASE_URL", "YOUR_URL_HERE").rstrip('/')
 
 APPS_FILE = "apps.json"
 
@@ -324,3 +324,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
